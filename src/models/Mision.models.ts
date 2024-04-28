@@ -18,6 +18,5 @@ const MisionSchema = new Schema<Mision>({
         minlength: 8
     }
 })
-
 const misionModel = model('Mision', MisionSchema);
 export default misionModel;
