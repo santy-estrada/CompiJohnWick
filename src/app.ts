@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-//import {router} from "./routes";
+import {router} from "./routes";
 import dbConnect from "./config/mongo";
 
 
@@ -15,7 +15,7 @@ app.use(cors());
 //config express to use json
 app.use(express.json());
 
-//app.use(router);
+app.use(router);
 
 //Conectar base de datos
 dbConnect().then(()=>console.log("Conectao"));
