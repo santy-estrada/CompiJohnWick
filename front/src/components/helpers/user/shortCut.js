@@ -1,1 +1,1 @@
-export const url = "/user";
+export const sh = "/user";

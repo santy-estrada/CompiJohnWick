@@ -1,5 +1,5 @@
 import Axios from "axios";
-import { url } from "./url"
+import { url } from "../url"
 import {sh} from "./shortCut"
 
 const updateSanction = async () => {
@@ -7,4 +7,4 @@ const updateSanction = async () => {
     return response.data;
 }
 
-export default registerSanction;
+export default updateSanction;

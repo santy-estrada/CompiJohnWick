@@ -1,1 +1,1 @@
-export const url = "/sanction";
+export const sh = "/sanction";

@@ -1,13 +1,31 @@
 <template>
-    <div class="wrapper">
+  <div class="wrapper">
     <div class="registration-box">
-      <h2>Registro</h2> 
+      <h2>Registro</h2>
       <form @submit.prevent="submitForm">
         <div class="input-box">
           <input type="text" placeholder="Alias" v-model="name" required>
         </div>
         <div class="input-box">
-          <input type="text" placeholder="e-mail de contacto" v-model="email" required>
+          <select v-model="role" required>
+            <option disabled value="">Select Role</option>
+            <option>AltaMesa</option>
+            <option>LiderDeRegion</option>
+            <option>Asesino</option>
+            <option>Adjudicador</option>
+          </select>
+        </div>
+        <div v-if="role === 'LiderDeRegion'" class="input-box">
+          <select v-model="region" required>
+            <option disabled value="">Select Region</option>
+            <option>New York</option>
+            <option>Tokyo</option>
+            <option>Medallo City</option>
+            <option>France</option>
+            <option>England</option>
+            <option>Rest of Europe</option>
+            <option>Rest of the world other than Europe</option>
+          </select>
         </div>
         <div class="input-box">
           <input type="password" placeholder="Contraseña" v-model="password" required>
@@ -20,37 +38,37 @@
           <label>Acepto términos y condiciones</label>
         </div>
         <div class="input-box button">
-          <button type="submit">Registrar ahora</button>
+          <button type="submit" class="btn btn-primary">Registrar ahora</button>
         </div>
         <div class="text">
           <h3>¿Ya hace parte del descontrol? <router-link to="/">Login now</router-link></h3>
         </div>
       </form>
     </div>
-    </div>
-  </template>
-  
-  <script>
-  export default {
-    data() {
-      return {
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        acceptedTerms: false
-      };
-    },
-    methods: {
-      submitForm() {
-        // Perform form submission logic here
-        console.log('Form submitted!');
-      }
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      name: '',
+      role: '',
+      region: '',
+      password: '',
+      confirmPassword: '',
+      acceptedTerms: false
+    };
+  },
+  methods: {
+    submitForm() {
+      console.log('Form submitted!');
     }
-  };
-  </script>
-  
-  <style scoped>
+  }
+};
+</script>
+
+<style scoped>
 .wrapper {
   position: fixed;
   top: 0;
@@ -64,11 +82,12 @@
   justify-content: center;
   align-items: center;
   background-color: rgba(255, 255, 255, 0.8); /* Background color with opacity */
+  font-family: 'Arial', sans-serif; /* Consistent font */
 }
 
 .registration-box {
   background-color: rgba(255, 255, 255, 0.8);
-  padding: 20px; /* Adjust as needed */
+  padding: 20px;
   border-radius: 8px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
 }
@@ -81,24 +100,23 @@
   margin-bottom: 20px;
 }
 
-
 .wrapper form {
   margin-top: 30px;
   width: 100%;
   max-width: 430px;
   padding: 34px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.8);
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
 }
 
 .wrapper form .input-box {
-  height: 52px;
   margin: 18px 0;
 }
 
-form .input-box input {
-  height: 100%;
+form .input-box input,
+form .input-box select {
+  height: 52px;
   width: 100%;
   outline: none;
   padding: 0 15px;
@@ -107,12 +125,14 @@ form .input-box input {
   color: #333;
   border: 1.5px solid #C7BEBE;
   border-bottom-width: 2.5px;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.3s ease;
 }
 
 .input-box input:focus,
-.input-box input:valid {
+.input-box input:valid,
+.input-box select:focus,
+.input-box select:valid {
   border-color: #4070f4;
 }
 
@@ -128,15 +148,26 @@ form h3 {
   margin-left: 10px;
 }
 
-.input-box.button input {
+.input-box.button input,
+.input-box.button .btn-primary {
+  height: 52px;
+  width: 100%;
   color: #fff;
   letter-spacing: 1px;
   border: none;
   background: #4070f4;
   cursor: pointer;
+  padding: 0 15px;
+  border-radius: 8px;
+  font-size: 17px;
+  font-weight: 400;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease;
 }
 
-.input-box.button input:hover {
+.input-box.button input:hover,
+.input-box.button .btn-primary:hover {
   background: #0e4bf1;
 }
 
@@ -154,7 +185,4 @@ form .text h3 a {
 form .text h3 a:hover {
   text-decoration: underline;
 }
-  
-  /* Background image specific to this component */
-  
-  </style>
+</style>
