@@ -4,7 +4,7 @@
       <h2>Registro</h2>
       <form @submit.prevent="submitForm">
         <div class="input-box">
-          <input type="text" placeholder="Alias" v-model="name" required>
+          <input type="text" placeholder="Alias" v-model="username" required>
         </div>
         <div class="input-box">
           <select v-model="role" required>
@@ -33,15 +33,11 @@
         <div class="input-box">
           <input type="password" placeholder="Confirme la contraseña" v-model="confirmPassword" required>
         </div>
-        <div class="policy">
-          <input type="checkbox" v-model="acceptedTerms">
-          <label>Acepto términos y condiciones</label>
-        </div>
         <div class="input-box button">
           <button type="submit" class="btn btn-primary">Registrar ahora</button>
         </div>
         <div class="text">
-          <h3>¿Ya hace parte del descontrol? <router-link to="/">Login now</router-link></h3>
+          <h3>¿Ya hace parte del descontrol? <router-link to="/login">Login now</router-link></h3>
         </div>
       </form>
     </div>
@@ -49,20 +45,45 @@
 </template>
 
 <script>
+import axios from 'axios';
 export default {
   data() {
     return {
-      name: '',
+      username: '',
       role: '',
       region: '',
       password: '',
-      confirmPassword: '',
-      acceptedTerms: false
+      confirmPassword: ''
     };
   },
   methods: {
-    submitForm() {
-      console.log('Form submitted!');
+    async submitForm() {
+      if (this.password !== this.confirmPassword) {
+        alert('Las contraseñas no coinciden');
+        return;
+      }
+      const formData = {
+        username: this.username,
+        role: this.role,
+        password: this.password
+      };
+
+      if(this.role === 'LiderDeRegion') {
+        formData.region = this.region;
+      }
+
+      try{
+        const response = await axios.post('http://localhost:2023/user/register', formData);
+        const token = response.data.token;
+        localStorage.setItem('token', token);
+        this.$router.push('/');
+        alert("La buena, ya estas registrado");
+          
+      } catch (error) {
+        alert(error.message);
+        return;
+      }
+      
     }
   }
 };

@@ -15,13 +15,13 @@
                 <p class="text-muted mb-4">Entre al crimen desorganizado</p>
                 <form @submit.prevent="submitForm">
                   <div class="form-group mb-3">
-                    <input v-model="user" type="text" placeholder="Secret user" class="form-control border-0 shadow-sm px-4">
+                    <input v-model="username" type="text" placeholder="Secret user" class="form-control border-0 shadow-sm px-4">
                   </div>
                   <div class="form-group mb-3">
-                    <input v-model="password" type="password" placeholder="Super secret password" class="form-control border-0 shadow-sm px-4 text-primary">
+                    <input :type="showPassword ? 'text' : 'password'" v-model="password" placeholder="Super secret password" class="form-control border-0 shadow-sm px-4 text-primary">
                   </div>
                   <div class="custom-control custom-checkbox mb-3">
-                    <input id="customCheck1" type="checkbox" checked class="custom-control-input">
+                    <input id="customCheck1" type="checkbox" v-model="showPassword" class="custom-control-input">
                     <label for="customCheck1" class="custom-control-label">Mostrar contraseña</label>
                   </div>
                   <button type="submit" class="btn btn-primary btn-block text-uppercase mb-2 shadow-sm">Entrar</button>
@@ -48,17 +48,30 @@
 </template>
 
 <script>
+import axios from 'axios';
 export default {
   data() {
     return {
-      user: '',
-      password: ''
+      username: '',
+      password: '',
+      showPassword: false
     };
   },
   methods: {
-    submitForm() {
-      // Handle form submission logic here
-      console.log('Form submitted!');
+    async submitForm() {
+      const formData = {
+        username: this.username,
+        password: this.password
+      };
+      try {
+        const response = await axios.post('http://localhost:2023/user/login', formData);
+        const token = response.data.token;
+        localStorage.setItem('token', token);
+        this.$router.push('/');
+        alert("La buena, ya estas loggeado");
+      } catch (error) {
+        alert(error.message);
+      }
     }
   }
 };
