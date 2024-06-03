@@ -1,16 +1,22 @@
 <template>
   <div class="wrapper">
+    <div class="top-right-buttons">
+      <button @click="goToDashboard" class="top-button">Regresar a Dashboard</button>
+    </div>
     <div class="registration-box">
       <h2>Reglas UwU</h2>
       <div class="dashboard">
         <h1>Opciones</h1>
-        <button @click="currentAction = 'createRule'" class="dashboard-button">Crea Rule</button>
-        <button @click="currentAction = 'getRules'" class="dashboard-button">Get Rules</button>
+        <button @click="setActionAndFetch('createRule')" class="dashboard-button">Crea Rule</button>
+        <button @click="setActionAndFetch('getRules')" class="dashboard-button">Get Rules</button>
         <button @click="currentAction = 'getRuleById'" class="dashboard-button">Get Rule by ID</button>
-        <button @click="currentAction = 'getRulesByCreator'" class="dashboard-button">Reglas por Creador</button>
+        <button @click="setAction('getRulesByCreator')" class="dashboard-button">Reglas por Creador</button>
         <button @click="currentAction = 'modifyRule'" class="dashboard-button">Modifica Regla</button>
       </div>
-      <div class="form-container">
+    </div>
+    <div class="modal" v-if="currentAction">
+      <div class="scrollable-card">
+        <button class="close-button" @click="currentAction = ''">X</button>
         <form v-if="currentAction === 'createRule'">
           <h3>Create Rule</h3>
           <div class="input-box">
@@ -20,6 +26,14 @@
             <input type="submit" @click.prevent="createRule" value="Submit">
           </div>
         </form>
+        <div v-if="currentAction === 'getRules'">
+          <h3>Fetched Rules:</h3>
+          <div v-if="rules.length">
+            <ul>
+              <li v-for="rule in rules" :key="rule._id">{{ rule.description }}</li>
+            </ul>
+          </div>
+        </div>
         <form v-if="currentAction === 'getRuleById'">
           <h3>Get Rule by ID</h3>
           <div class="input-box">
@@ -27,6 +41,10 @@
           </div>
           <div class="input-box button">
             <input type="submit" @click.prevent="getRuleById" value="Submit">
+          </div>
+          <div v-if="rule">
+            <h4>Fetched Rule:</h4>
+            <p>{{ rule.description }}</p>
           </div>
         </form>
         <form v-if="currentAction === 'getRulesByCreator'">
@@ -37,9 +55,18 @@
           <div class="input-box button">
             <input type="submit" @click.prevent="getRulesByCreator" value="Submit">
           </div>
+          <div v-if="rules.length">
+            <h4>Fetched Rules:</h4>
+            <ul>
+              <li v-for="rule in rules" :key="rule._id">{{ rule.description }}</li>
+            </ul>
+          </div>
         </form>
         <form v-if="currentAction === 'modifyRule'">
           <h3>Modify Rule</h3>
+          <div class="input-box">
+            <input type="text" placeholder="Enter ID of the rule to modify" v-model="ruleId">
+          </div>
           <div class="input-box">
             <input type="text" placeholder="Enter new description" v-model="newDescription">
           </div>
@@ -62,33 +89,31 @@ export default {
       description: '',
       ruleId: '',
       creatorId: '',
-      newDescription: ''
+      newDescription: '',
+      rules: [],
+      rule: null,
     };
   },
   methods: {
-    async isLogged() {
+    goToDashboard() {
+      this.$router.push({ path: '/' });
+    },
+    async createRule() {
+      let response;
       try {
-        const config = {
+        response = await axios({
+          method: 'get',
+          url: 'http://localhost:2023/user/validate-token',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
-        };
-        const response = await axios.get('http://localhost:2023/user/validate-token', config);
-        const data = response.data;
-        if (data.isValid) {
-          return data.role;
-        } else {
-          return false;
-        }
+        });
       } catch (error) {
         console.error('Error:', error);
-        return false;
+        return;
       }
-    },
-    async createRule() {
-      // Implement create rule functionality
-      const role = await this.isLogged();
+      const role = response.data.role;
       if (role !== 'AltaMesa') {
         alert('No tienes permisos para crear reglas');
         return;
@@ -97,7 +122,6 @@ export default {
         alert('La descripción no puede estar vacía');
         return;
       }
-
       try {
         const config = {
           headers: {
@@ -105,24 +129,96 @@ export default {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         };
-        const formData = {
-          description: this.description
-        };
-        const response = await axios.post('http://localhost:2023/rule/create', formData, config);
+        const formData = JSON.stringify({ description: this.description });
+        await axios.post('http://localhost:2023/rule/create', formData, config);
         alert('Regla creada exitosamente');
+        this.$router.push({ path: '/' });
       } catch (error) {
         console.error('Error:', error);
+        this.$router.push({ path: '/' });
         return;
       }
     },
+    async getRules() {
+      try {
+        const response = await axios.get('http://localhost:2023/rule/get', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        this.rules = response.data;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to fetch rules');
+      }
+    },
     async getRuleById() {
-      // Implement get rule by ID functionality
+      if (this.ruleId === '') {
+        alert('El ID no puede estar vacío');
+        return;
+      }
+      try {
+        const response = await axios.get(`http://localhost:2023/rule/get/${this.ruleId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        this.rule = response.data;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to fetch rule by ID');
+      }
     },
     async getRulesByCreator() {
-      // Implement get rules by creator functionality
+      this.rules = [];  // Clear rules before fetching
+      if (this.creatorId === '') {
+        alert('El ID del creador no puede estar vacío');
+        return;
+      }
+      try {
+        const response = await axios.get(`http://localhost:2023/rule/get-creator/${this.creatorId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        this.rules = response.data;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to fetch rules by creator');
+      }
     },
     async modifyRule() {
-      // Implement modify rule functionality
+      if (this.ruleId === '' || this.newDescription === '') {
+        alert('ID y la nueva descripción no pueden estar vacíos');
+        return;
+      }
+      try {
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        };
+        const formData = JSON.stringify({ description: this.newDescription });
+        await axios.put(`http://localhost:2023/rule/modify/${this.ruleId}`, formData, config);
+        alert('Regla modificada exitosamente');
+        this.$router.push({ path: '/' });
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to modify rule');
+      }
+    },
+    setActionAndFetch(action) {
+      this.currentAction = action;
+      if (action === 'getRules') {
+        this.getRules();
+      }
+    },
+    setAction(action) {
+      this.currentAction = action;
+      if (action === 'getRulesByCreator') {
+        this.rules = []; // Clear rules when switching to 'getRulesByCreator'
+      }
     }
   }
 };
@@ -141,8 +237,63 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.8); /* Background color with opacity */
-  font-family: 'Arial', sans-serif; /* Consistent font */
+  background-color: rgba(255, 255, 255, 0.8);
+  font-family: 'Arial', sans-serif;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.scrollable-card {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 80%;
+  overflow-y: auto;
+  max-height: 90vh; /* Adjust based on your preference */
+  position: relative;
+}
+
+.top-right-buttons {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.top-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  color: white;
+  background-color: #4070f4;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
 }
 
 .registration-box {
@@ -193,11 +344,6 @@ export default {
 
 .dashboard-button:hover {
   background-color: #0e4bf1;
-}
-
-.form-container {
-  width: 100%;
-  margin-top: 20px;
 }
 
 .input-box {

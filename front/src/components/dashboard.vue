@@ -20,50 +20,43 @@ import axios from 'axios';
 export default {
   methods: {
     async isLogged() {
-      try {
-        const config = {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        };
-        const response = await axios.get('http://localhost:2023/user/validate-token', config);
-        const data = response.data;
-        if (data.isValid) {
-          return true;
-        } else {
-          return false;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error('Token not found in localStorage');
+      return false;
+    }
+
+    try {
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
-      } catch (error) {
-        console.error('Error:', error);
-        return false;
-      }
-    },
+      };
+      const response = await axios.get('http://localhost:2023/user/validate-token', config);
+      const data = response.data;
+      return data.isValid;
+    } catch (error) {
+      console.error('Error:', error);
+      return false;
+    }
+},
     async showRules() {
-      
       this.$router.push('/rules');
-     
     },
     async showMissions() {
-      
       this.$router.push('/missions');
-      
+    },
+    async showSanctions() {
+      const logged = await this.isLogged();
+      alert(logged);
     },
     async showConflicts() {
       if (await this.isLogged()) {
         console.log('Showing conflicts');
         this.$router.push('/conflicts');
       } else {
-        alert("Dummy dumb dumb, you need to login first");
-        this.$router.push('/login');
-      }
-    },
-    async showSanctions() {
-      if (await this.isLogged()) {
-        console.log('Showing sanctions');
-        this.$router.push('/sanctions');
-      } else {
-        alert("Dummy dumb dumb, you need to login first");
+        alert("You need to login first");
         this.$router.push('/login');
       }
     },
