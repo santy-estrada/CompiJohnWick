@@ -1,42 +1,75 @@
 <template>
   <div class="wrapper">
+    <div class="top-right-buttons">
+      <button @click="goToDashboard" class="top-button">Regresar a Dashboard</button>
+    </div>
     <div class="registration-box">
       <h2>Reglas UwU</h2>
       <div class="dashboard">
         <h1>Opciones</h1>
-        <button @click="currentAction = 'registerConflict'" class="dashboard-button">Crea Conflito</button>
-        <button @click="currentAction = 'getConflicts'" class="dashboard-button">Get Conflitos</button>
-        <button @click="currentAction = 'getConflictById'" class="dashboard-button">Get Conflito by ID</button>
-        <button @click="currentAction = 'resolveConflict'" class="dashboard-button">No Más Conflito</button>
+        <button @click="currentAction = 'registerConflict'; showModal = true" class="dashboard-button">Crea Conflicto</button>
+        <button @click="setActionAndFetch('getConflicts'); showModal = true" class="dashboard-button">Get Conflictos</button>
+        <button @click="currentAction = 'getConflictById'; showModal = true" class="dashboard-button">Get Conflicto by ID</button>
+        <button @click="currentAction = 'resolveConflict'; showModal = true" class="dashboard-button">No Más Conflicto</button>
       </div>
-      <div class="form-container">
-        <form v-if="currentAction === 'registerConflict'">
-          <h3>Create Conflito</h3>
-          <div class="input-box">
-            <input type="text" placeholder="Enter description" v-model="description">
+    </div>
+
+    <div v-if="showModal" class="modal">
+      <div class="modal-content">
+        <span class="close" @click="showModal = false">&times;</span>
+        <div class="form-container">
+          <form v-if="currentAction === 'registerConflict'">
+            <h3>Create Conflicto</h3> 
+            <div class="input-box">
+              <input type="text" placeholder="Enter username 1" v-model="username1">
+            </div>
+            <div class="input-box">
+              <input type="text" placeholder="Enter username 2" v-model="username2">
+            </div>
+            <div class="input-box button">
+              <input type="submit" @click.prevent="createConflict" value="Submit">
+            </div>
+          </form>
+          <div v-if="currentAction === 'getConflicts'">
+            <h3>Conflictos Obtenidos:</h3>
+            <div v-if="conflicts.length">
+              <ul>
+                <li v-for="conflict in conflicts" :key="conflict._id">
+                  {{ formatConflict(conflict) }}
+                </li>
+              </ul>
+            </div>
           </div>
-          <div class="input-box button">
-            <input type="submit" @click.prevent="createRule" value="Submit">
+          <div v-if="currentAction === 'getConflictById'">
+            <h3>Get Conflicto by ID</h3>
+            <div class="input-box">
+              <input type="text" placeholder="Enter ID" v-model="conflictId">
+            </div>
+            <div class="input-box button">
+              <input type="submit" @click.prevent="getConflictById" value="Submit">
+            </div>
+            <div v-if="conflictById">
+              <h3>Conflicto Obtenido:</h3>
+              <ul>
+                <li>
+                  {{ formatConflict(conflictById) }}
+                </li>
+              </ul>
+            </div>
           </div>
-        </form>
-        <form v-if="currentAction === 'getConflictById'">
-          <h3>Get Rule by ID</h3>
-          <div class="input-box">
-            <input type="text" placeholder="Enter ID" v-model="ruleId">
-          </div>
-          <div class="input-box button">
-            <input type="submit" @click.prevent="getRuleById" value="Submit">
-          </div>
-        </form>
-        <form v-if="currentAction === 'resolveConflict'">
-          <h3>Get Rules by Creator</h3>
-          <div class="input-box">
-            <input type="text" placeholder="Enter Creator ID" v-model="creatorId">
-          </div>
-          <div class="input-box button">
-            <input type="submit" @click.prevent="getRulesByCreator" value="Submit">
-          </div>
-        </form>
+          <form v-if="currentAction === 'resolveConflict'">
+            <h3>Resolve Conflict</h3>
+            <div class="input-box">
+              <input type="text" placeholder="Enter Conflict ID" v-model="conflictIdToResolve">
+            </div>
+            <div class="input-box">
+              <input type="text" placeholder="Enter Solution" v-model="solution">
+            </div>
+            <div class="input-box button">
+              <input type="submit" @click.prevent="resolveConflict" value="Submit">
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -50,12 +83,20 @@ export default {
     return {
       currentAction: '',
       description: '',
-      ruleId: '',
-      creatorId: '',
-      newDescription: ''
+      username1: '',
+      username2: '',
+      conflictId: '',
+      conflictIdToResolve: '',
+      solution: '',
+      showModal: false,
+      conflicts: [],
+      conflictById: null
     };
   },
   methods: {
+    goToDashboard() {
+      this.$router.push({ path: '/' });
+    },
     async isLogged() {
       try {
         const config = {
@@ -76,14 +117,13 @@ export default {
         return false;
       }
     },
-    async createRule() {
-      // Implement create rule functionality
-      if(await this.isLogged() !== 'AltaMesa') {
-        alert('No tienes permisos para crear reglas');
+    async createConflict() {
+      if (await this.isLogged() !== 'AltaMesa') {
+        alert('No tienes permisos para crear conflictos');
         return;
       }
-      if(this.description === '') {
-        alert('La descripción no puede estar vacía');
+      if (this.username1 === '' || this.username2 === '') {
+        alert('Los nombres de usuario no pueden estar vacíos');
         return;
       }
 
@@ -91,29 +131,95 @@ export default {
         const config = {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`}
-        }
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        };
         const formData = {
-          description: this.description
-        }
-        const response = await axios.post('http://localhost:2023/rule/create', formData, config);
-      }catch (error) {
+          usersInvolved: [this.username1, this.username2]
+        };
+        await axios.post('http://localhost:2023/conflict/register-conflict', formData, config);
+        alert('Conflicto creado exitosamente');
+        this.showModal = false;
+        this.$router.push({ path: '/' });
+      } catch (error) {
         console.error('Error:', error);
-        return;
+        alert('Failed to create conflict');
       }
     },
-    async getRuleById() {
-      // Implement get rule by ID functionality
+    async getConflicts() {
+      try {
+        const response = await axios.get('http://localhost:2023/conflict/get', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        this.conflicts = response.data;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al obtener conflictos');
+      }
     },
-    async getRulesByCreator() {
-      // Implement get rules by creator functionality
+    async getConflictById() {
+      if (this.conflictId === '') {
+        alert('El ID no puede estar vacío');
+        return;
+      }
+      try {
+        const response = await axios.get(`http://localhost:2023/conflict/get/${this.conflictId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        this.conflictById = response.data;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to fetch conflict by ID');
+      }
     },
-    async modifyRule() {
-      // Implement modify rule functionality
-    }
+    async resolveConflict() {
+      if (await this.isLogged() !== 'AltaMesa') {
+        alert('No tienes permisos para resolver conflictos');
+        return;
+      }
+      if (this.conflictIdToResolve === '' || this.solution === '') {
+        alert('El ID del conflicto y la solución no pueden estar vacíos');
+        return;
+      }
+      try {
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        };
+        const formData = {
+          solution: this.solution
+        };
+        await axios.put(`http://localhost:2023/conflict/resolve-conflicts/${this.conflictIdToResolve}`, formData, config);
+        alert('Conflicto resuelto exitosamente');
+        this.showModal = false;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to resolve conflict');
+      }
+    },
+    formatConflict(conflict) {
+      if(conflict.status === 'resolved') {
+        return `${conflict.status}: ${conflict.solution}`;
+      } else {
+        return `${conflict.status}`;
+      }
+    },
+    setActionAndFetch(action) {
+      this.currentAction = action;
+      if (action === 'getConflicts') {
+        this.getConflicts();
+      }
+    },
   }
 };
 </script>
+
 
 <style scoped>
 .wrapper {
@@ -182,6 +288,49 @@ export default {
   background-color: #0e4bf1;
 }
 
+.modal {
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 500px;
+  border-radius: 8px;
+  position: relative;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .form-container {
   width: 100%;
   margin-top: 20px;
@@ -236,5 +385,24 @@ export default {
   width: 100%;
   text-align: center;
   margin-bottom: 20px;
+}
+
+.top-right-buttons {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.top-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  color: white;
+  background-color: #4070f4;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 </style>

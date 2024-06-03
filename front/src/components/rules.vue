@@ -284,15 +284,13 @@ export default {
 }
 
 .close-button {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
   position: absolute;
   top: 10px;
-  right: 10px;
-  background-color: red;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
+  right: 20px;
   cursor: pointer;
 }
 

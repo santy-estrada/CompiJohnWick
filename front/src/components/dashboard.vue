@@ -48,8 +48,13 @@ export default {
       this.$router.push('/missions');
     },
     async showSanctions() {
-      const logged = await this.isLogged();
-      alert(logged);
+      if (await this.isLogged()) {
+        console.log('Showing sanctions');
+        this.$router.push('/sanctions');
+      } else {
+        alert("You need to login first");
+        this.$router.push('/login');
+      }
     },
     async showConflicts() {
       if (await this.isLogged()) {

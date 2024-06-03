@@ -1,46 +1,42 @@
 <template>
   <div class="wrapper">
+    <div class="top-right-buttons">
+      <button @click="goToDashboard" class="top-button">Regresar a Dashboard</button>
+    </div>
     <div class="registration-box">
-      <h2>Reglas UwU</h2>
+      <h2>Sanciones 0_0</h2>
       <div class="dashboard">
         <h1>Opciones</h1>
-        <button @click="currentAction = 'registerSanction'" class="dashboard-button">Crea Sanction</button>
-        <button @click="currentAction = 'getSanctions'" class="dashboard-button">Get Sanctions</button>
+        <button @click="setAction('registerSanction')" class="dashboard-button">Crea Sanction</button>
+        <button @click="setActionAndFetch('getSanctions')" class="dashboard-button">Get Sanctions</button>
         <button @click="currentAction = 'getSanctionById'" class="dashboard-button">Get Sanction by ID</button>
         <button @click="currentAction = 'updateSanction'" class="dashboard-button">Cambiar Sanction</button>
+        <button @click="currentAction = 'addSanctionToUser'" class="dashboard-button">Add sanction to user</button>
       </div>
-      <div class="form-container">
-        <form v-if="currentAction === 'registerSanction'">
-          <h3>Create Sanction</h3>
+    </div>
+    <div class="modal" v-if="currentAction">
+      <div class="scrollable-card">
+        <button class="close-button" @click="currentAction = ''">X</button>
+        <!-- Existing Forms -->
+
+        <!-- Add Sanction to User Form -->
+        <form v-if="currentAction === 'addSanctionToUser'">
+          <h3>Add Sanction to User</h3>
           <div class="input-box">
-            <input type="text" placeholder="Enter description" v-model="description">
+            <input type="text" placeholder="Enter User ID" v-model="userID">
+          </div>
+          <div class="input-box">
+            <input type="text" placeholder="Enter Sanction ID" v-model="sanctionId">
           </div>
           <div class="input-box button">
-            <input type="submit" @click.prevent="createRule" value="Submit">
-          </div>
-        </form>
-        <form v-if="currentAction === 'getSanctionById'">
-          <h3>Get Rule by ID</h3>
-          <div class="input-box">
-            <input type="text" placeholder="Enter ID" v-model="ruleId">
-          </div>
-          <div class="input-box button">
-            <input type="submit" @click.prevent="getRuleById" value="Submit">
-          </div>
-        </form>
-        <form v-if="currentAction === 'resolveSanction'">
-          <h3>Get Rules by Creator</h3>
-          <div class="input-box">
-            <input type="text" placeholder="Enter Creator ID" v-model="creatorId">
-          </div>
-          <div class="input-box button">
-            <input type="submit" @click.prevent="getRulesByCreator" value="Submit">
+            <input type="submit" @click.prevent="addSanctionToUser" value="Submit">
           </div>
         </form>
       </div>
     </div>
   </div>
 </template>
+
 
 <script>
 import axios from 'axios';
@@ -49,13 +45,37 @@ export default {
   data() {
     return {
       currentAction: '',
-      description: '',
-      ruleId: '',
-      creatorId: '',
-      newDescription: ''
+      cause: '',
+      sanctionId: '',
+      userID: '', // Added userID for the new form
+      newCause: '',
+      causes: [],
+      newCauses: [],
+      sanctions: [],
+      sanction: null,
+      sanctionType: ''
     };
   },
   methods: {
+    goToDashboard() {
+      this.$router.push({ path: '/' });
+    },
+    addCause() {
+      if (this.cause) {
+        this.causes.push(this.cause);
+        this.cause = '';
+      } else {
+        alert('La causa no puede estar vacía');
+      }
+    },
+    addNewCause() {
+      if (this.newCause) {
+        this.newCauses.push(this.newCause);
+        this.newCause = '';
+      } else {
+        alert('La causa no puede estar vacía');
+      }
+    },
     async isLogged() {
       try {
         const config = {
@@ -66,24 +86,19 @@ export default {
         };
         const response = await axios.get('http://localhost:2023/user/validate-token', config);
         const data = response.data;
-        if (data.isValid) {
-          return data.role;
-        } else {
-          return false;
-        }
+        return data.isValid ? data.role : false;
       } catch (error) {
         console.error('Error:', error);
         return false;
       }
     },
-    async createRule() {
-      // Implement create rule functionality
-      if(await this.isLogged() !== 'AltaMesa') {
-        alert('No tienes permisos para crear reglas');
+    async createSanction() {
+      if (await this.isLogged() !== 'AltaMesa') {
+        alert('No tienes permisos para crear sanciones');
         return;
       }
-      if(this.description === '') {
-        alert('La descripción no puede estar vacía');
+      if (!this.causes.length || !this.sanctionType) {
+        alert('Debe haber al menos una causa y un tipo de sanción seleccionado');
         return;
       }
 
@@ -91,29 +106,122 @@ export default {
         const config = {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`}
-        }
-        const formData = {
-          description: this.description
-        }
-        const response = await axios.post('http://localhost:2023/rule/create', formData, config);
-      }catch (error) {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        };
+        const formData = JSON.stringify({
+          causes: this.causes,
+          typeSanction: this.sanctionType
+        });
+        await axios.post('http://localhost:2023/sanction/register', formData, config);
+        alert('Sanción creada exitosamente');
+        this.$router.push({ path: '/' });
+      } catch (error) {
         console.error('Error:', error);
-        return;
+        alert('Failed to create sanction');
       }
     },
-    async getRuleById() {
-      // Implement get rule by ID functionality
+    async getSanctions() {
+      try {
+        const response = await axios.get('http://localhost:2023/sanction/get', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        this.sanctions = response.data;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to fetch sanctions');
+      }
     },
-    async getRulesByCreator() {
-      // Implement get rules by creator functionality
+    async getSanctionById() {
+      if (this.sanctionId === '') {
+        alert('El ID no puede estar vacío');
+        return;
+      }
+      try {
+        const response = await axios.get(`http://localhost:2023/sanction/get/${this.sanctionId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        this.sanction = response.data;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to fetch sanction by ID');
+      }
     },
-    async modifyRule() {
-      // Implement modify rule functionality
+    async updateSanction() {
+      if (await this.isLogged() !== 'AltaMesa') {
+        alert('No tienes permisos para modificar sanciones');
+        return;
+      }
+      if (this.sanctionId === '' || !this.newCauses.length) {
+        alert('El ID y las nuevas causas no pueden estar vacíos');
+        return;
+      }
+      try {
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        };
+        const formData = JSON.stringify({
+          causes: this.newCauses
+        });
+        await axios.put(`http://localhost:2023/sanction/update/${this.sanctionId}`, formData, config);
+        alert('Sanción modificada exitosamente');
+        this.$router.push({ path: '/' });
+      } catch (error) {
+        console.error('Error:', error);
+        alert(error);
+      }
+    },
+    async addSanctionToUser() {
+      if (await this.isLogged() !== 'AltaMesa') {
+        alert('No tienes permisos para agregar sanciones a usuarios');
+        return;
+      }
+      if (!this.userID || !this.sanctionId) {
+        alert('User ID y Sanction ID no pueden estar vacíos');
+        return;
+      }
+      try {
+        const config = {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        };
+        const formData = JSON.stringify({
+          userId: this.userID,
+          sanctionId: this.sanctionId
+        });
+        await axios.put('http://localhost:2023/user/add-sanction', formData, config);
+        alert('Sanción agregada al usuario exitosamente');
+        this.$router.push({ path: '/' });
+      } catch (error) {
+        console.error('Error:', error);
+        alert(error);
+      }
+    },
+    setActionAndFetch(action) {
+      this.currentAction = action;
+      if (action === 'getSanctions') {
+        this.getSanctions();
+      }
+    },
+    setAction(action) {
+      this.currentAction = action;
+    },
+    formatSanction(sanction) {
+      return `${sanction.causes.join(', ')}: ${sanction.typeSanction}`;
     }
   }
 };
 </script>
+
 
 <style scoped>
 .wrapper {
@@ -128,8 +236,48 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.8); /* Background color with opacity */
-  font-family: 'Arial', sans-serif; /* Consistent font */
+  background-color: rgba(255, 255, 255, 0.8);
+  font-family: 'Arial', sans-serif;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.scrollable-card {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 80%;
+  overflow-y: auto;
+  max-height: 90vh; /* Adjust based on your preference */
+  position: relative;
+}
+
+.top-right-buttons {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+}
+
+.top-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  color: white;
+  background-color: #4070f4;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
 .registration-box {
@@ -142,27 +290,11 @@ export default {
   align-items: center;
 }
 
-.registration-box h2 {
-  font-size: 22px;
-  font-weight: 600;
-  color: #333;
-  text-align: center;
-  margin-bottom: 20px;
-}
-
 .dashboard {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
-}
-
-.dashboard h1 {
-  font-size: 22px;
-  font-weight: 600;
-  color: #333;
-  text-align: center;
-  margin-bottom: 20px;
 }
 
 .dashboard-button {
@@ -178,63 +310,32 @@ export default {
   max-width: 200px;
 }
 
-.dashboard-button:hover {
-  background-color: #0e4bf1;
-}
-
-.form-container {
-  width: 100%;
-  margin-top: 20px;
-}
-
 .input-box {
-  margin: 18px 0;
+  margin: 10px 0;
 }
 
-.input-box input {
-  height: 52px;
+.input-box input, .input-box select {
   width: 100%;
-  outline: none;
-  padding: 0 15px;
-  font-size: 17px;
-  font-weight: 400;
-  color: #333;
-  border: 1.5px solid #C7BEBE;
-  border-bottom-width: 2.5px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
-.input-box input:focus,
-.input-box input:valid {
-  border-color: #4070f4;
-}
-
-.input-box.button input {
-  height: 52px;
-  width: 100%;
-  color: #fff;
-  letter-spacing: 1px;
+.input-box.button input[type="submit"], .input-box.button button {
+  background: #007bff;
+  color: white;
   border: none;
-  background: #4070f4;
   cursor: pointer;
-  padding: 0 15px;
-  border-radius: 8px;
-  font-size: 17px;
-  font-weight: 400;
-  text-transform: uppercase;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: background 0.3s ease;
 }
 
-.input-box.button input:hover {
-  background: #0e4bf1;
-}
-
-.form-container h3 {
-  color: #333;
-  width: 100%;
-  text-align: center;
-  margin-bottom: 20px;
+.close-button {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  cursor: pointer;
 }
 </style>
